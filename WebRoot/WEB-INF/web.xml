@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5" 
+	xmlns="http://java.sun.com/xml/ns/javaee" 
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+	http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+	<!-- 如果需要读取特定路径下的spring配置文件。需要在web.xml中添加如下信息。
+	<param-name>contextConfigLocation</param-name>是不能改变的。
+	如果不配置只会读取默认路径(也就是项目的src根路径)下的application.xml配置文件的！！！
+	 -->
+  	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>
+		/WEB-INF/spring/*.xml
+		/WEB-INF/config-*.xml
+		</param-value>
+	</context-param>
+	<!-- 
+	ContextLoaderListener的作用就是启动Web容器时，自动装配ApplicationContext.xml的配置信息。因为它实现了
+	ServletContextListener这个接口，在web.xml配置这个监听器，启动容器时，就会默认执行它实现的方法。
+    applicationContext的默认的路径是”/WEB-INF/applicationContext.xml。
+           也可以在web.xml中配置该文件的其他位置， 配置contextConfigLocation。如上：
+	 -->
+	<listener>  
+        <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>  
+    </listener>
+  <servlet>
+    <servlet-name>testservlet</servlet-name>
+    <servlet-class>com.mybatis.web.testservlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>testservlet</servlet-name>
+    <url-pattern>/testservlet</url-pattern>
+  </servlet-mapping>	
+  <welcome-file-list>
+    <welcome-file>index.jsp</welcome-file>
+  </welcome-file-list>
+</web-app>

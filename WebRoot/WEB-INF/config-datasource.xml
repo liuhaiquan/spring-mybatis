@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans default-lazy-init="true"
+	xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+     http://www.springframework.org/schema/beans/spring-beans.xsd
+     http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop.xsd
+     http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd">
+	
+	<!-- 使用NestedPropertyPlaceholderConfigurer加载properties配置文件 .这个jar包是神州数码的。也可以换成spring的
+	<bean class="com.****.spring.config.NestedPropertyPlaceholderConfigurer">
+	     order ：属性代表其加载顺序 
+		<property name="order" value="-2147483648" />
+		<加载config.properties,为了下面可以使用 ${adp.dbType}的值
+		 
+    	classpath 和 classpath* 区别： 
+		classpath：只会到你的class路径中查找找文件; 
+		classpath*：不仅包含class路径，还包括jar文件中(class路径)进行查找. 
+     	
+		<property name="preLocations" value="classpath*:config.properties" />
+		<property name="locationPaths" value="classpath*:config-${adp.dbType}.properties"/>
+	</bean>
+	-->
+	
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">  
+			<property name="locations">  
+			<!-- PropertyPlaceholderConfigurer类中有个locations属性，接收的是一个集合，即我们可以在下面配好多个properties文件 -->
+						<list>
+				        	<!-- 这里支持多种寻址方式：classpath和file -->
+				        	<value>classpath*:config-mysql.properties</value>
+				        	<!-- 推荐使用file的方式引入，这样可以将配置和代码分离
+				        	<value>file:/opt/demo/config/demo-mq.properties</value>
+				        	<value>file:/opt/demo/config/demo-remote.properties</value>
+				        	 -->
+			        	</list>
+			</property>  
+	</bean>
+	
+	
+	
+	
+	<!-- 用ProxyFactoryBean创建代理 -->
+	<bean id="dataSource" class="org.springframework.aop.framework.ProxyFactoryBean">
+	     <!--这里代理的是接口-->
+		<property name="proxyInterfaces" value="javax.sql.DataSource" />
+		<!--是ProxyFactoryBean要代理的目标类--> 
+		<property name="target" ref="${adp.dataSource.type}DataSource" />
+	</bean>
+	
+    <!--druid 配置数据源      参数详情参考：https://www.cnblogs.com/SummerinShire/p/5828888.html 
+                或者https://www.cnblogs.com/wuyun-blog/p/5679073.html     -->  
+	<bean id="localDataSource" class="com.alibaba.druid.pool.DruidDataSource" destroy-method="close">
+	    <!-- 加载数据库驱动 -->
+		<property name="driverClassName" value="${adp.dataSource.jdbc.driver}" />
+		<!-- 数据库访问地址 --> 
+		<property name="url" value="${adp.dataSource.jdbc.url}" />
+		<!-- 用户名 -->
+		<property name="username" value="${adp.dataSource.jdbc.user}" />
+		<!-- 密码-->
+		<property name="password" value="${adp.dataSource.jdbc.password}" />
+		<!-- 
+		属性类型是字符串，通过别名的方式配置扩展插件， 
+				常用的插件有： 
+				监控统计用的filter:stat  
+				日志用的filter:log4j 
+				防御sql注入的filter:wall 
+		-->
+		<property name="filters" value="stat" />
+		 <!-- 最大并发连接数 -->  
+		<property name="maxActive" value="20" />
+		<!-- 初始化连接数量 -->  
+		<property name="initialSize" value="1" />
+		<!-- 最小空闲连接数 -->
+		<property name="minIdle" value="1" />
+		<!-- maxWait获取连接等待超时的时间 -->
+		<property name="maxWait" value="60000" />
+		<!-- timeBetweenEvictionRunsMillis间隔多久才进行一次检测，检测需要关闭的空闲连接，单位是毫秒 -->
+		<property name="timeBetweenEvictionRunsMillis" value="60000" />
+		
+		
+		<!-- minEvictableIdleTimeMillis一个连接在池中最小空闲的时间，单位是毫秒-->
+		<property name="minEvictableIdleTimeMillis" value="300000" />
+		<!-- 用来检测连接是否有效的sql，要求是一个查询语句。如果validationQuery为null，testOnBorrow、testOnReturn、testWhileIdle都不会其作用。 -->
+		<property name="validationQuery" value="SELECT 'x'" />
+		<!-- 建议配置为true，不影响性能，并且保证安全性。申请连接的时候检测，如果空闲时间大于timeBetweenEvictionRunsMillis，执行validationQuery检测连接是否有效。 -->
+		<property name="testWhileIdle" value="true" />
+		<!-- 申请连接时执行validationQuery检测连接是否有效，做了这个配置会降低性能。 -->
+		<property name="testOnBorrow" value="false" />
+		<!-- 归还连接时执行validationQuery检测连接是否有效，做了这个配置会降低性能 -->
+		<property name="testOnReturn" value="false" />
+		<!-- 是否缓存preparedStatement，也就是PSCache。PSCache对支持游标的数据库性能提升巨大，比如说oracle。在mysql下建议关闭。 -->
+		<property name="poolPreparedStatements" value="true" />
+		<!-- 打开PSCache，并且指定每个连接上PSCache的大小 -->
+		<property name="maxPoolPreparedStatementPerConnectionSize" value="20" />
+	</bean>
+	<!-- jdbc事务管理器 --> 
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+
+</beans>

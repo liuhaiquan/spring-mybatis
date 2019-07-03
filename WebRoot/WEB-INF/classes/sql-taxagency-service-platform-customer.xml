@@ -1,0 +1,276 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="taxagency.service">
+	<sql id="CustomerService_getList_condition">
+		<where>
+			<if test="null != customerName and '' != customerName">
+				and (T.customerName LIKE CONCAT('%',#{customerName},'%') OR T.mnemonicCode LIKE CONCAT('%',#{customerName},'%'))
+			</if>
+	    	<if test="null != organizationId and '' != organizationId">and T.organizationId = #{organizationId}</if>
+	    	<if test="null != customerState and '' != customerState">and T.customerState = #{customerState}</if>
+	    	<if test="null != accountingUserCode and '' != accountingUserCode">and T.accountingUserCode LIKE CONCAT('%',#{accountingUserCode},'%')</if>
+	    	<if test="null != billState and '' != billState">and T.billState = #{billState}</if>
+	    	<if test="null != tallyState and '' != tallyState">and T.tallyState = #{tallyState}</if>
+	    	<if test="null != reimburseState and '' != reimburseState">and T.reimburseState = #{reimburseState}</if>
+	    	<if test="null != vatType and '' != vatType">and T1.`vatType` = #{vatType}</if>
+		</where>
+	</sql>
+	<!-- 查询虚拟账号（不创建手机号）最大号码 -->
+    <select id="CustomerService_getMaxNumber" parameterType="map"
+		resultType="String">
+		SELECT 
+		  a.`customerContactsPhone` 
+		FROM
+		  `taxagency_customer` a 
+		WHERE a.`customerContactsPhone` LIKE '8%' 
+		ORDER BY a.`customerContactsPhone` DESC 
+		LIMIT 0, 1 
+		<include refid="CustomerService_getList_condition" />
+	</select>
+	<!-- 查询客户名称对应的记录 -->
+    <select id="CustomerService_getCustomerByName" parameterType="map"
+		resultType="int">
+		SELECT 
+		  COUNT(1) 
+		FROM
+		  `taxagency_customer` a 
+		WHERE
+		 a.`customerState` != '02' 
+		<if test="null != organizationId and '' != organizationId">and a.`organizationId` = #{organizationId}</if>
+		<if test="null != taxNumber and '' != taxNumber">and a.`taxNumber` = #{taxNumber}</if>
+		<if test="null != customerName and '' != customerName">and a.`customerName` = #{customerName}</if>
+		<if test="null != customerId and '' != customerId">and a.`customerId` != #{customerId}</if>
+	</select>
+	
+	<!-- 校验助记码是否唯一 -->
+	<select id="CustomerService_checkMnemonicCode" parameterType="map"
+		resultType="int">
+		SELECT 
+		  COUNT(1) 
+		FROM
+		  taxagency_customer 
+		WHERE customerState != '02' 
+		AND organizationId= #{organizationId} and mnemonicCode=#{mnemonicCode}
+        <if test="null != customerId and '' != customerId"> and customerId != #{customerId}</if>
+	</select>
+	<select id="CustomerService_getList" parameterType="map"
+		resultType="map">
+		SELECT * 
+		FROM taxagency_customer T LEFT JOIN taxagency_customer_accountinfo T1 ON T.customerId=T1.customerId 
+		<include refid="CustomerService_getList_condition" /> 
+			<if test="null != desc and '' != desc">ORDER BY T.mnemonicCode DESC</if>
+			<if test="null == desc or '' == desc">ORDER BY T.mnemonicCode ASC</if>
+	</select>
+
+	<select id="CustomerService_getListCount" parameterType="map"
+		resultType="int">
+		SELECT count(1) 
+		FROM taxagency_customer T LEFT JOIN taxagency_customer_accountinfo T1 ON T.customerId=T1.customerId 
+		<include refid="CustomerService_getList_condition" />
+	</select>
+	
+	<!-- 查看客户下的所有成员 -->
+	<select id="CustomerService_getCustomerMember" parameterType="map"
+		resultType="map">
+		SELECT * FROM `taxagency_user_info` a  
+		WHERE 
+		a.`companyId` =#{companyId}   
+		AND a.`userState` = '${userState}'  
+		ORDER BY a.`isController` DESC 
+	</select>
+
+	<select id="CustomerService_getOne" parameterType="map"
+		resultType="map">
+		SELECT *
+		FROM taxagency_customer T 
+		LEFT JOIN taxagency_customer_accountinfo T1 ON T.customerId=T1.customerId 
+		LEFT JOIN taxagency_user_info T2 on T.customerContactsPhone=T2.userName 
+		WHERE 
+		T.customerId = '${customerId}'
+	</select>
+	
+	<select id="CustomerService_getCustomerById" parameterType="map"
+		resultType="map">
+		SELECT *
+		FROM taxagency_customer T 
+		LEFT JOIN taxagency_user_info T2 on T.customerId=T2.companyId 
+		WHERE 
+		T.customerId = '${customerId}' AND isController='Y'
+	</select>
+
+	<insert id="CustomerService_save" parameterType="map">
+		INSERT INTO
+		taxagency_customer
+		(customerId,accountingUserCode,organizationId,customerName,customerLevel,customerInfo,customerImage,areaCode,
+		customerContacts,customerContactsPhone,taxNumber,isSetAccount,customerState,customerEmail,weixinCode,
+		businessLicense,legalRepre,legalPersonID,addressId,customerAddress,taxAuthoritiesTypeCode,taxAdministrator,
+		localtaxAuthoritiesTypeCode,localTaxAdministrator,businessTypeCode,accountSetId,inputTime,inputUserCode,updateTime,
+		updateUserCode,customerAccountInfoId,mnemonicCode)
+		VALUES
+		(#{customerId},#{accountingUserCode},#{organizationId},#{customerName},#{customerLevel},#{customerInfo},
+		#{customerImage},#{areaCode},#{customerContacts},#{customerContactsPhone},#{taxNumber},#{isSetAccount},'00',
+		#{customerEmail},#{weixinCode},#{businessLicense},#{legalRepre},#{legalPersonID},#{addressId},#{customerAddress},
+		#{taxAuthoritiesTypeCode},#{taxAdministrator},#{localtaxAuthoritiesTypeCode},#{localTaxAdministrator},
+		#{businessTypeCode},#{accountSetId},SYSDATE(),#{inputUserCode},SYSDATE(),#{updateUserCode},#{customerAccountInfoId},#{mnemonicCode})
+	</insert>
+	
+	<insert id="CustomerService_recovery" parameterType="map">
+		INSERT INTO
+		taxagency_customer
+		(customerId,accountingUserCode,organizationId,customerName,customerLevel,customerInfo,customerImage,areaCode,
+		customerContacts,customerContactsPhone,taxNumber,isSetAccount,customerState,customerEmail,weixinCode,
+		businessLicense,legalRepre,legalPersonID,addressId,customerAddress,taxAuthoritiesTypeCode,taxAdministrator,
+		localtaxAuthoritiesTypeCode,localTaxAdministrator,businessTypeCode,accountSetId,inputTime,inputUserCode,updateTime,
+		updateUserCode,customerAccountInfoId,industryCode,
+		<if test="null != billPeriod and '' != billPeriod">
+				billPeriod,
+		</if>
+		billState,
+		<if test="null != tallyPeriod and '' != tallyPeriod">
+				tallyPeriod,
+		</if>
+		tallyState,
+		<if test="null != reimbursePeriod and '' != reimbursePeriod">
+				reimbursePeriod,
+		</if>
+		reimburseState)
+		VALUES
+		(#{customerId},#{accountingUserCode},#{organizationId},#{customerName},#{customerLevel},#{customerInfo},
+		#{customerImage},#{areaCode},#{customerContacts},#{customerContactsPhone},#{taxNumber},#{isSetAccount},#{customerState},
+		#{customerEmail},#{weixinCode},#{businessLicense},#{legalRepre},#{legalPersonID},#{addressId},#{customerAddress},
+		#{taxAuthoritiesTypeCode},#{taxAdministrator},#{localtaxAuthoritiesTypeCode},#{localTaxAdministrator},
+		#{businessTypeCode},#{accountSetId},SYSDATE(),#{inputUserCode},SYSDATE(),#{updateUserCode},#{customerAccountInfoId},
+		#{industryCode},
+		<if test="null != billPeriod and '' != billPeriod">
+				#{billPeriod},
+		</if>
+		#{billState},
+		<if test="null != tallyPeriod and '' != tallyPeriod">
+				#{tallyPeriod},
+		</if>
+		#{tallyState},
+		<if test="null != reimbursePeriod and '' != reimbursePeriod">
+				#{reimbursePeriod},
+		</if>
+		#{reimburseState})
+	</insert>
+
+	<update id="CustomerService_update" parameterType="map">
+		UPDATE
+		taxagency_customer
+		<set>
+			<if test="null != accountingUserCode and '' != accountingUserCode"> accountingUserCode = #{accountingUserCode},</if>
+			<if test="null != organizationId and '' != organizationId"> organizationId = #{organizationId},</if>
+			<if test="null != customerName and '' != customerName"> customerName = #{customerName},</if>
+			<if test="null != customerLevel and '' != customerLevel"> customerLevel = #{customerLevel},</if>
+			<if test="null != customerInfo and '' != customerInfo"> customerInfo = #{customerInfo},</if>
+			<if test="null != customerImage and '' != customerImage"> customerImage = #{customerImage},</if>
+			<if test="null != areaCode and '' != areaCode"> areaCode = #{areaCode},</if>
+			<if test="null != customerContacts and '' != customerContacts"> customerContacts = #{customerContacts},</if>
+			<if test="null != customerContactsPhone and '' != customerContactsPhone"> customerContactsPhone = #{customerContactsPhone},</if>
+			<if test="null != taxNumber and '' != taxNumber"> taxNumber = #{taxNumber},</if>
+			<if test="null != isSetAccount and '' != isSetAccount"> isSetAccount = #{isSetAccount},</if>
+			<if test="null != customerState and '' != customerState"> customerState = #{customerState},</if>
+			<if test="null != customerEmail and '' != customerEmail"> customerEmail = #{customerEmail},</if>
+			<if test="null != weixinCode and '' != weixinCode"> weixinCode = #{weixinCode},</if>
+			<if test="null != businessLicense and '' != businessLicense"> businessLicense = #{businessLicense},</if>
+			<if test="null != legalRepre and '' != legalRepre"> legalRepre = #{legalRepre},</if>
+			<if test="null != legalPersonID and '' != legalPersonID"> legalPersonID = #{legalPersonID},</if>
+			<if test="null != addressId and '' != addressId"> addressId = #{addressId},</if>
+			<if test="null != customerAddress and '' != customerAddress"> customerAddress = #{customerAddress},</if>
+			<if test="null != taxAuthoritiesTypeCode and '' != taxAuthoritiesTypeCode"> taxAuthoritiesTypeCode = #{taxAuthoritiesTypeCode},</if>
+			<if test="null != taxAdministrator and '' != taxAdministrator"> taxAdministrator = #{taxAdministrator},</if>
+			<if test="null != localtaxAuthoritiesTypeCode and '' != localtaxAuthoritiesTypeCode"> localtaxAuthoritiesTypeCode = #{localtaxAuthoritiesTypeCode},</if>
+			<if test="null != localTaxAdministrator and '' != localTaxAdministrator"> localTaxAdministrator = #{localTaxAdministrator},</if>
+			<if test="null != businessTypeCode and '' != businessTypeCode"> businessTypeCode = #{businessTypeCode},</if>
+			<if test="null != accountSetId and '' != accountSetId"> accountSetId = #{accountSetId},</if>
+			<if test="null != tallyPeriod and '' != tallyPeriod"> tallyPeriod = #{tallyPeriod},</if>
+			<if test="null != tallyState and '' != tallyState"> tallyState = #{tallyState},</if>
+			<if test="null != reimbursePeriod and '' != reimbursePeriod"> reimbursePeriod = #{reimbursePeriod},</if>
+			<if test="null != reimburseState and '' != reimburseState"> reimburseState = #{reimburseState},</if>
+			<if test="null != mnemonicCode and '' != mnemonicCode"> mnemonicCode = #{mnemonicCode},</if>
+			updateTime = SYSDATE(),
+			updateUserCode = #{inputUserCode},
+			<if test="null != customerAccountInfoId and '' != customerAccountInfoId"> customerAccountInfoId = #{customerAccountInfoId}</if>
+		</set>
+		WHERE
+		customerId = '${customerId}'
+	</update>
+
+	<delete id="CustomerService_delete" parameterType="map">
+		DELETE
+		FROM
+		taxagency_customer
+		WHERE
+		customerId = '${customerId}'
+	</delete>
+	<insert id="CustomerService_saveCustomerBatch" parameterType="list">
+		INSERT INTO taxagency_customer(customerId,customerName,accountingUserCode,taxNumber,businessLicense,legalRepre,legalPersonID,industryCode,
+		businessTypeCode,customerContacts,customerContactsPhone,customerEmail,customerLevel,areaCode,organizationId,customerState,
+		inputTime,inputUserCode,updateTime)
+		VALUES
+		<foreach collection="list" item="item" index="index"
+			separator=",">
+			('${item.customerId}','${item.customerName}','${item.accountingUserCode}','${item.taxNumber}','${item.businessLicense}','${item.legalRepre}','${item.legalPersonID}',
+			'${item.industryCode}','${item.businessTypeCode}','${item.customerContacts}','${item.customerContactsPhone}','${item.customerEmail}',
+			'${item.customerLevel}','${item.areaCode}','${item.organizationId}','${item.customerState}',NOW(),'${item.inputUserCode}',NOW())
+		</foreach>
+	</insert>
+	
+	<select id="CustomerService_getCustomerLevel" parameterType="map"
+		resultType="map">
+		SELECT * FROM `taxagency_customer_level_type`
+	</select>
+	
+		
+	<select id="CustomerService_getAccountMonth" parameterType="map"
+		resultType="map">
+		SELECT customerId, accountMonth,accountingSystemId,fixedasset
+		<!-- ,inventorySet,inventoryPeriod   -->   
+		FROM taxagency_customer_accountinfo  
+	 WHERE customerId = #{customerId} 
+	</select>
+	
+	<select id="CustomerService_getCustomerList" parameterType="map"
+		resultType="map">
+		SELECT customerId id, customerName text  
+		FROM taxagency_customer 
+	 WHERE organizationId = #{organizationId} 
+	 AND customerId != #{customerId} 
+	 AND customerState = '00'
+	</select>
+	
+	<select id="CustomerService_getCustomerUserCode" parameterType="map"
+		resultType="map">
+		SELECT userCode    
+		FROM taxagency_user_info  
+	 WHERE companyId = #{customerId}  
+	 AND userType = '2' 
+	 AND isController = 'Y' 
+	</select>
+	
+	<select id="CustomerService_getOneByPhone" parameterType="map"
+		resultType="map">
+		SELECT *
+		FROM taxagency_customer 
+		WHERE 
+		customerContactsPhone = '${customerContactsPhone}' and customerState = '00'
+	</select>
+	
+	<delete id="CustomerService_deleteByUserId" parameterType="map">
+		DELETE
+		FROM
+		taxagency_customer
+		WHERE
+		accountingUserCode = '${accountingUserCode}'
+	</delete>
+	
+	
+	<delete id="CustomerService_deleteByOrgId" parameterType="map">
+		DELETE
+		FROM
+		taxagency_customer
+		WHERE
+		organizationId = '${organizationId}'
+	</delete>
+</mapper>

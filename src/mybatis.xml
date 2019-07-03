@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+
+	<properties>
+	    <!-- 设置方言：使用哪种数据库value值就写哪种 -->
+		<property name="dialect" value="mysql" />
+	</properties>
+
+	<settings>
+	    <!-- 当结果集中含有Null值时是否执行映射对象的setter或者Map对象的put方法。此设置对于原始类型如int,boolean等无效。 -->
+		<setting name="callSettersOnNulls" value="true" />
+		<!-- 这个配置使全局的映射器启用或禁用 缓存。 -->
+		<setting name="cacheEnabled" value="FALSE" />
+		<!--MyBatis 利用本地缓存机制（Local Cache）防止循环引用（circular references）和加速重复嵌套查询。 
+		默认值为 SESSION，这种情况下会缓存一个会话中执行的所有查询。
+		 若设置值为 STATEMENT，本地会话仅用在语句执行上，对相同 SqlSession 的不同调用将不会共享数据。-->
+		<setting name="localCacheScope" value="STATEMENT" />
+		<!-- 当没有为参数提供特定的 JDBC 类型时，为空值指定 JDBC 类型。 某些驱动需要指定列的 JDBC 类型，多数情况直接用一般类型即可，比如 NULL、VARCHAROTHER。-->
+		<setting name="jdbcTypeForNull" value="NULL" />
+		<!-- 配置默认的执行器。SIMPLE执行器没有什么特别之处。REUSE执行器重用预处理语句。BATCH执行器重用语句和批量更新 -->
+		<setting name="defaultExecutorType" value="BATCH" />
+	</settings>
+	
+	 
+	<!-- 下面两个个标签详解参考：http://ju.outofmemory.cn/entry/94633 -->
+    <!--  如果有很多种类型的话，每次都得把类型的全路径写上，感觉就很费事。所以就可以用mybatis提供的typeAliases来进行别名配置-->
+	<typeAliases>
+		<typeAlias alias="BlobTypeHandler" type="org.apache.ibatis.type.BlobTypeHandler" />
+	</typeAliases>
+    <!-- 类型处理器。用途：
+						1.获取数据库的值，以合适的方式转变为对应的java类型
+						2.将java类型，以合适的方式转化为数据库的保存类型
+						
+	注意：暂时不能使用，放开之后有异常					
+	<typeHandlers>
+		<typeHandler javaType="java.lang.String"
+			handler="com.mybatis.db.type.StringTypeHandler" />
+	</typeHandlers>
+	 -->
+    <!-- 插件配置,这边为mybatis配置分页拦截器，这个分页拦截器需要我们自己实现 -->
+	<plugins>
+		<plugin interceptor="com.mybatis.db.interceptor.PaginationInterceptor" />
+	</plugins>
+ 
+</configuration>
